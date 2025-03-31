@@ -1,0 +1,45 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main  # Trigger the action when code is pushed to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the latest code from GitHub
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # Step 2: SSH into the server and deploy the app
+      - name: Deploy App via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: "Enter IP Here"      
+          username: "Enter User Name Here"
+          port: "Enter Port Here"         
+          key: |
+            -----BEGIN OPENSSH PRIVATE KEY-----
+            Enter Key Here
+            -----END OPENSSH PRIVATE KEY-----
+
+          script: |
+            # Stop the running container (anibot)
+            sudo docker stop anibot || true
+            sudo docker rm anibot || true
+            
+            # Navigate to the repo directory and pull the latest changes
+            cd ~/code/AnibotV2
+            git pull origin main
+          
+            # Remove the old image
+            sudo docker rmi anibot || true
+          
+            # Build the Docker container
+            sudo docker build -t anibot . || exit
+          
+            # Run the new Docker container
+            sudo docker run -d --name anibot -p 3000:3000 anibot
