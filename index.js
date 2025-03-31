@@ -22,6 +22,7 @@ const COIN_MARKET_CAP_BASE_URL = process.env.COIN_MARKET_CAP_BASE_URL;
 const CURRENCY_CONVERTER_BASE_URL = process.env.CURRENCY_CONVERTER_BASE_URL;
 const BOT_CHANNEL_ID = process.env.BOT_CHANNEL_ID;
 const CURRENCY_API_KEY = process.env.CURRENCY_API_KEY;
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 // Bot Ready Event
 client.once("ready", () => {
@@ -29,7 +30,7 @@ client.once("ready", () => {
   schedule.scheduleJob("0 */2 * * *", postRandomImage);
 });
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+client.login(BOT_TOKEN);
 
 // Command: Ping Response
 client.on("messageCreate", (message) => {
