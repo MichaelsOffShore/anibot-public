@@ -1,12 +1,24 @@
-require("dotenv").config();
-const fs = require("fs");
-const path = require("path");
-const axios = require("axios");
-const { Client, GatewayIntentBits } = require("discord.js");
-const schedule = require("node-schedule");
+import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
+import { Client, GatewayIntentBits } from "discord.js";
+import schedule from "node-schedule";
+import { fileURLToPath } from "url";
+
+import { generateRandomNumber } from "./utils/helpers.js";
+import {
+  PING_HEALTH_CHECK_COMMAND,
+  IMAGES_DIRECTORY,
+} from "./utils/constants.js";
+
+// Load environment variables
+dotenv.config();
 
 // Bot Configuration
-const imagesDir = path.join(__dirname, "Images");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const imagesDir = path.join(__dirname, IMAGES_DIRECTORY);
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -16,7 +28,8 @@ const client = new Client({
 });
 
 // Configuration (Environment Variables)
-const COIN_MARKET_CAP_API_KEY_HEADER = process.env.COIN_MARKET_CAP_API_KEY_HEADER;
+const COIN_MARKET_CAP_API_KEY_HEADER =
+  process.env.COIN_MARKET_CAP_API_KEY_HEADER;
 const COIN_MARKET_CAP_API_KEY = process.env.COIN_MARKET_CAP_API_KEY;
 const COIN_MARKET_CAP_BASE_URL = process.env.COIN_MARKET_CAP_BASE_URL;
 const CURRENCY_CONVERTER_BASE_URL = process.env.CURRENCY_CONVERTER_BASE_URL;
@@ -32,9 +45,9 @@ client.once("ready", () => {
 
 client.login(BOT_TOKEN);
 
-// Command: Ping Response
+// Command: Ping Response (Health Check)
 client.on("messageCreate", (message) => {
-  if (message.content.toLowerCase() === "!ping") {
+  if (message.content.toLowerCase() === PING_HEALTH_CHECK_COMMAND) {
     message.channel.send("Pong.");
   }
 });
@@ -42,7 +55,7 @@ client.on("messageCreate", (message) => {
 // Command: Get Cryptocurrency Price
 client.on("messageCreate", async (message) => {
   const msgArray = message.content.toLowerCase().split(" ");
-  if (msgArray.length > 1 && msgArray[0] === "!price") {
+  if (msgArray.length > 1 && msgArray[0] === GET_CRYPTO_PRICE_COMMAND) {
     const ticker = msgArray[1].toUpperCase();
     try {
       const usdPrice = await getCryptocurrencyPrice(ticker);
@@ -50,13 +63,15 @@ client.on("messageCreate", async (message) => {
         `${CURRENCY_CONVERTER_BASE_URL}${usdPrice}`,
         { headers: { apikey: CURRENCY_API_KEY } }
       );
-      
+
       const eurPrice = Math.round(response.data.result * 100) / 100;
       console.log(`EUR Price: €${eurPrice}`);
       message.reply(`€${eurPrice}`);
     } catch (error) {
       console.error("Error fetching cryptocurrency price:", error);
-      message.reply(`Error retrieving price for ${ticker}. Please try again later.`);
+      message.reply(
+        `Error retrieving price for ${ticker}. Please try again later.`
+      );
     }
   }
 });
@@ -72,18 +87,20 @@ const postRandomImage = () => {
       console.warn("No images found in directory.");
       return;
     }
-    
+
     const randomFile = files[generateRandomNumber(0, files.length - 1)];
     console.log(`Sending random image: ${path.join(imagesDir, randomFile)}`);
-    
+
     const channel = client.channels.cache.get(BOT_CHANNEL_ID);
     if (channel) {
       channel.send({
-        files: [{
-          attachment: path.join(imagesDir, randomFile),
-          name: randomFile,
-          description: "Random Image",
-        }],
+        files: [
+          {
+            attachment: path.join(imagesDir, randomFile),
+            name: randomFile,
+            description: "Random Image",
+          },
+        ],
       });
     } else {
       console.error("Invalid BOT_CHANNEL_ID. Check your .env file.");
@@ -91,19 +108,13 @@ const postRandomImage = () => {
   });
 };
 
-// Function: Generate Random Number (Inclusive)
-const generateRandomNumber = (min, max) => {
-  return Math.floor(Math.random() * (max - min + 1) + min);
-};
-
 // Function: Fetch Cryptocurrency Price from API
 async function getCryptocurrencyPrice(ticker) {
   try {
-    const response = await axios.get(
-      `${COIN_MARKET_CAP_BASE_URL}${ticker}`,
-      { headers: { [COIN_MARKET_CAP_API_KEY_HEADER]: COIN_MARKET_CAP_API_KEY } }
-    );
-    
+    const response = await axios.get(`${COIN_MARKET_CAP_BASE_URL}${ticker}`, {
+      headers: { [COIN_MARKET_CAP_API_KEY_HEADER]: COIN_MARKET_CAP_API_KEY },
+    });
+
     const usdPrice = response.data.data[ticker].quote.USD.price;
     console.log(`USD Price = $${usdPrice.toFixed(2)}`);
     return usdPrice.toFixed(2);
